@@ -238,69 +238,63 @@ export default {
     },
   },
   audio: {
-    quality: 'high', // high, medium, low, lowest
+    quality: 'high',
     encryption: 'aead_aes256_gcm_rtpsize',
-    resamplingQuality: 'best', // best, medium, fastest, zero order holder, linear
-    loudnessNormalizer: false, // Enable/disable AGC globally
-    lookaheadMs: 5, // Limiter lookahead buffer in milliseconds
-    gateThresholdLUFS: -60, // Silence threshold for AGC gate
+    resamplingQuality: 'best',
+    loudnessNormalizer: true,
+    lookaheadMs: 10,
+    gateThresholdLUFS: -60,
     fading: {
-      enabled: false, // Master switch for all fades
-      // type meanings:
-      // volume = only amplitude fades, tape = pitch/speed ramps, both = simultaneous fade and ramp
-      // curve meanings:
-      // linear = constant rate, exponential = slow start then faster, sinusoidal = smooth s-curve
+      enabled:true,
       trackStart: {
-        // Effect when a new track begins
-        duration: 0, // ms
-        curve: 'linear',
-        type: 'volume' // volume, tape, both
+        duration: 0,
+        curve: 'exponential',
+          type: 'both'
+
       },
       trackEnd: {
-        // Effect triggered automatically before track finishes
         duration: 0,
-        curve: 'linear',
-        type: 'volume'
+        curve: 'exponential',
+             type: 'both'
+
       },
       trackStop: {
-        // Effect when manually stopping or skipping
         duration: 0,
-        curve: 'linear',
-        type: 'volume'
+        curve: 'exponential',
+         type: 'both'
+
       },
       seek: {
-        // Effect applied after a seek operation
-        duration: 0,
-        curve: 'linear',
-        type: 'volume'
+        duration: 350,
+        curve: 'linear', 
+        type: 'both'
+
       },
       pause: {
-        // Effect applied when pausing playback
-        duration: 0,
+        duration: 1500,
         curve: 'sinusoidal',
-        type: 'tape'
+          type: 'both'
+
       },
       resume: {
-        // Effect applied when resuming from pause
-        duration: 0,
+        duration:1500,
         curve: 'sinusoidal',
-        type: 'tape'
+        type: 'both'
       },
       ducking: {
-        // Partial fade out for overlay events (e.g., TTS, notifications)
-        enabled: false,
-        duration: 0, // ms
-        targetVolume: 0.3, // Volume multiplier (0.3 = 30%)
-        curve: 'linear'
+        enabled: true,
+        duration: 0,
+        targetVolume: 0.15,
+        curve: 'exponential'
       }
     },
     crossfade: {
-      enabled: false,
-      duration: 0, // Crossfade duration in milliseconds
-      curve: 'sinusoidal', // linear | sine | sinusoidal
-      mode: 'preload', // preload or stream
-      minBufferMs: 250, // Minimum buffered PCM before crossfade starts
-      bufferMs: 0 // 0 = auto (use duration)
+      enabled: true,
+      duration: 10000,
+      curve: 'sinusoidal',
+      mode: 'stream',
+      minBufferMs: 1000,
+      bufferMs: 0
     }
   },
   voiceReceive: {
