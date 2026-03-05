@@ -24,8 +24,8 @@ export default {
       tasksPerWorker: 32, // Number of parallel tasks each micro-worker can handle before queuing
       silentLogs: true // If true, micro-workers will only log warnings and errors
     },
-    commandTimeout: 6000, // Timeout for heavy operations like loadTracks (6s)
-    fastCommandTimeout: 4000, // Timeout for player commands like play/pause (4s)
+    commandTimeout: 7000, // Timeout for heavy operations like loadTracks (6s)
+    fastCommandTimeout: 5000, // Timeout for player commands like play/pause (4s)
     maxRetries: 2, // Number of retry attempts on timeout or worker failure
     hibernation: {
       enabled: true,
