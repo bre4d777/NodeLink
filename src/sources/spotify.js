@@ -6,6 +6,7 @@ import {
 } from '../utils.ts'
 import { fetchCanvas } from '../modules/spotifyCanvas.js'
 import { getLocalToken } from '../modules/spotifyAuth.js'
+import { mirror } from '../mirror.ts'
 
 const SPOTIFY_API_BASE_URL = 'https://api.spotify.com/v1'
 const SPOTIFY_CLIENT_API_URL = 'https://spclient.wg.spotify.com'
@@ -1567,69 +1568,13 @@ export default class SpotifySource {
       }
     }
 
-    const searchQuery = this._buildSearchQuery(decodedTrack, isExplicit)
 
     try {
-      let searchResult
-      if (decodedTrack.isrc) {
-        searchResult = await this.nodelink.sources.search(
-          'youtube',
-          `"${decodedTrack.isrc}"`,
-          'ytmsearch'
-        )
-        if (
-          searchResult.loadType !== 'search' ||
-          searchResult.data.length === 0
-        ) {
-          searchResult = await this.nodelink.sources.search(
-            'youtube',
-            searchQuery,
-            'ytmsearch'
-          )
-        }
-      } else {
-        searchResult = await this.nodelink.sources.search(
-          'youtube',
-          searchQuery,
-          'ytmsearch'
-        )
+      const mirrored = await mirror(this.nodelink, decodedTrack, this.config.mirroringSources)
+      if (!mirrored){
+         return { exception: { message: 'No suitable match.', severity: 'fault' } }
       }
-
-      if (
-        searchResult.loadType !== 'search' ||
-        searchResult.data.length === 0
-      ) {
-        searchResult =
-          await this.nodelink.sources.searchWithDefault(searchQuery)
-      }
-
-      if (
-        searchResult.loadType !== 'search' ||
-        searchResult.data.length === 0
-      ) {
-        return {
-          exception: {
-            message: 'No alternative stream found via default search.',
-            severity: 'fault'
-          }
-        }
-      }
-
-      const bestMatch = getBestMatch(searchResult.data, decodedTrack, {
-        allowExplicit: this.allowExplicit
-      })
-
-      if (!bestMatch) {
-        return {
-          exception: {
-            message: 'No suitable alternative stream found after filtering.',
-            severity: 'fault'
-          }
-        }
-      }
-
-      const streamInfo = await this.nodelink.sources.getTrackUrl(bestMatch.info)
-      return { newTrack: bestMatch, ...streamInfo }
+      return { newTrack: mirrored.match, ...mirrored.streamInfo }
     } catch (e) {
       logger(
         'warn',
