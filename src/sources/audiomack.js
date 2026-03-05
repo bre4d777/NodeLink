@@ -316,7 +316,7 @@ export default class AudioMackSource {
       logger('warn', 'Audiomack', `Direct stream failed for "${track.title}": ${e.message}. Falling back to mirror.`)
     }
 
-    const mirrored = await mirror(this.nodelink, track, ['jssearch', 'dzsearch', 'scsearch', 'ytmsearch', 'ytsearch'])
+    const mirrored = await mirror(this.nodelink, track, ['jssearch', 'scsearch', 'ytmsearch', 'ytsearch'])
     if (!mirrored) {
       return { exception: { message: 'No suitable alternative found.', severity: 'fault' } }
     }

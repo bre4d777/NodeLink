@@ -27,3 +27,4 @@
 !tsconfig.json
 !dist
 !dist/**
+!yt.js
