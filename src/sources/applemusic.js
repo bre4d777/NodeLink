@@ -5,7 +5,7 @@ import {
   http1makeRequest,
   logger
 } from '../utils.ts'
-import { mirror, mirror } from '../mirror.ts'
+import { mirror } from '../mirror.ts'
 const API_BASE = 'https://amp-api.music.apple.com/v1'
 const MAX_PAGE_ITEMS = 300
 const BATCH_SIZE_DEFAULT = 5
@@ -665,19 +665,24 @@ export default class AppleMusicSource {
 
 
   async getTrackUrl(decodedTrack, itag, forceRefresh = false) {
-    const mirror = await mirror(this.nodelink, decodedTrack, this.config.mirroringSources)
+    const mirrored = await mirror(this.nodelink, decodedTrack, this.config.mirroringSources)
 
-    if (!mirror) {
+    if (!mirrored) {
       return { exception: { message: 'No suitable match.', severity: 'fault' } }
     }
 
+    if (!itag && !forceRefresh && mirrored.streamInfo?.url) {
+      return { newTrack: mirrored.match, ...mirrored.streamInfo }
+    }
+
     try {
-      const stream = await this.nodelink.sources.getTrackUrl(mirror.match.info ?? mirror.match, itag, forceRefresh)
-      return { newTrack: mirror.match, ...stream }
+      const stream = await this.nodelink.sources.getTrackUrl(mirrored.match.info ?? mirrored.match, itag, forceRefresh)
+      return { newTrack: mirrored.match, ...stream }
     } catch (error) {
       return { exception: { message: error.message, severity: 'fault' } }
     }
   }
+  
   _buildSearchQuery(track, isExplicit) {
     let searchQuery = `${track.title} ${track.author}`
     if (isExplicit) {

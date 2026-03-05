@@ -51,15 +51,15 @@ function levenshteinDistance(s1: string, s2: string): number {
   const len1 = s1.length
   const len2 = s2.length
   const dp: number[][] = Array.from({ length: len1 + 1 }, () => Array(len2 + 1).fill(0))
-  for (let i = 0; i <= len1; i++) dp[i][0] = i
-  for (let j = 0; j <= len2; j++) dp[0][j] = j
+  for (let i = 0; i <= len1; i++) dp[i]![0] = i
+  for (let j = 0; j <= len2; j++) dp[0]![j] = j
   for (let i = 1; i <= len1; i++) {
     for (let j = 1; j <= len2; j++) {
       const cost = s1[i - 1] === s2[j - 1] ? 0 : 1
-      dp[i][j] = Math.min(dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + cost)
+      dp[i]![j] = Math.min(dp[i - 1]![j]! + 1, dp[i]![j - 1]! + 1, dp[i - 1]![j - 1]! + cost)
     }
   }
-  return dp[len1][len2]
+  return dp[len1]![len2]!
 }
 
 function stringSimilarity(s1: string, s2: string): number {
@@ -118,7 +118,7 @@ function rankCandidates(original: Track, candidates: Track[]): ScoredMatch[] {
   const limit = Math.min(candidates.length, 10)
   const scored: ScoredMatch[] = []
   for (let i = 0; i < limit; i++) {
-    const candidate = candidates[i]
+    const candidate = candidates[i]!
     const score = scoreMatch(original, candidate)
     scored.push({ match: candidate, score })
     log.debug(`Candidate ${i + 1}: "${candidate.info?.title || candidate.title}" | Score: ${score.toFixed(3)}`)
@@ -174,7 +174,7 @@ async function mirror(nodelink: any, track: Track, mirroringSources?: string[]):
   let globalBest: (ScoredMatch & { prefix: string }) | null = null
 
   for (let i = 0; i < sources.length; i++) {
-    const prefix = sources[i]
+    const prefix = sources[i]!
 
     log.debug(`[${prefix}] priority ${i} | query: "${query}"`)
 
@@ -191,7 +191,7 @@ async function mirror(nodelink: any, track: Track, mirroringSources?: string[]):
     const ranked = rankCandidates(track, searchResult.data)
     if (!ranked.length) continue
 
-    const top = ranked[0].score
+    const top = ranked[0]!.score
 
     if (top >= IMMEDIATE_USE) {
       const result = await findBestValidMatch(nodelink, ranked.slice(0, 1), IMMEDIATE_USE)

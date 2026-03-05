@@ -1,6 +1,7 @@
 import { http1makeRequest, logger, encodeTrack , getBestMatch} from '../utils.ts'
 import crypto from 'node:crypto'
 import { PassThrough } from 'node:stream'
+import { mirror } from '../mirror.ts'
 
 const audiomackPatterns = [
   /https?:\/\/(?:www\.)?audiomack\.com\/[^/]+\/song\/[^/]+(?:\?.*)?$/i,
@@ -254,7 +255,6 @@ export default class AudioMackSource {
       }
     }
   }
-
   async getTrackUrl(track) {
     if (!track.identifier) {
       return {
@@ -267,13 +267,10 @@ export default class AudioMackSource {
     }
 
     const playUrl = `${API_BASE}/music/play/${track.identifier}`
-
     try {
       let section = '/search'
       if (track.uri) {
-        try {
-          section = new URL(track.uri).pathname
-        } catch {}
+        try { section = new URL(track.uri).pathname } catch {}
       }
 
       const { body, error } = await this.makeSignedRequest('GET', playUrl, {
@@ -289,12 +286,10 @@ export default class AudioMackSource {
             severity: 'fault',
             cause: 'StreamLink'
           }
-       };
-     }
+        }
+      }
 
-
-      const json = parseJsonBody(body)
-      const data = normalizeApiResult(json)
+      const data = normalizeApiResult(parseJsonBody(body))
       if (!data) {
         return {
           exception: {
@@ -302,16 +297,10 @@ export default class AudioMackSource {
             severity: 'fault',
             cause: 'StreamLink'
           }
-        };   
+        }
       }
 
-      const streamUrl =
-        data.signedUrl ||
-        data.signed_url ||
-        data.url ||
-        data.streamUrl ||
-        data.stream_url
-
+      const streamUrl = data.signedUrl ?? data.signed_url ?? data.url ?? data.streamUrl ?? data.stream_url
       if (!streamUrl) {
         return {
           exception: {
@@ -319,35 +308,31 @@ export default class AudioMackSource {
             severity: 'fault',
             cause: 'StreamLink'
           }
-        };
-      }
-
-      const format = guessFormatFromUrl(streamUrl)
-      return { url: streamUrl, protocol: 'https', format }
-    } catch (e) {
-      logger(
-        'warn',
-        'Audiomack',
-        `Direct stream failed for ${track.title}: ${e.message}. Falling back to YouTube.`
-      )
-    }
-
-    const searchResult = await this.nodelink.sources.searchWithDefault(
-      `${track.title} ${track.author}`
-    )
-
-    const bestMatch = getBestMatch(searchResult.data, track)
-    if (!bestMatch)
-      return {
-        exception: {
-          message: 'No suitable alternative found.',
-          severity: 'fault'
         }
       }
 
-    const streamInfo = await this.nodelink.sources.getTrackUrl(bestMatch.info)
-    return { newTrack: bestMatch, ...streamInfo }
+      return { url: streamUrl, protocol: 'https', format: guessFormatFromUrl(streamUrl) }
+    } catch (e) {
+      logger('warn', 'Audiomack', `Direct stream failed for "${track.title}": ${e.message}. Falling back to mirror.`)
+    }
+
+    const mirrored = await mirror(this.nodelink, track, ['jsearch', 'gnsearch', 'dzsearch', 'scsearch', 'ytmsearch', 'ytsearch'])
+    if (!mirrored) {
+      return { exception: { message: 'No suitable alternative found.', severity: 'fault' } }
+    }
+
+    if (mirrored.streamInfo?.url) {
+      return { newTrack: mirrored.match, ...mirrored.streamInfo }
+    }
+
+    try {
+      const stream = await this.nodelink.sources.getTrackUrl(mirrored.match.info ?? mirrored.match)
+      return { newTrack: mirrored.match, ...stream }
+    } catch (e) {
+      return { exception: { message: e.message, severity: 'fault' } }
+    }
   }
+  
 
   async loadStream(decodedTrack, url, _protocol, additionalData) {
     try {

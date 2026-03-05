@@ -492,7 +492,7 @@ class NodelinkServer extends EventEmitter {
       // EventEmitter used as WebSocket server shim for Bun
       this.socket = new EventEmitter()
     } else {
-      this.socket = new WebSocketServer()
+      this.socket = new (WebSocketServer as any)({ noServer: true })
     }
     memoryTrace('constructor:after-socket-server')
 

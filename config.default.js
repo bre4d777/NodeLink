@@ -1,7 +1,7 @@
 export default {
   server: {
     host: '0.0.0.0',
-    port: 3000,
+    port: 5000,
     password: 'youshallnotpass',
     useBunServer: false // set to true to use Bun.serve websocket (experimental)
   },
@@ -52,7 +52,7 @@ export default {
   logging: {
     level: 'debug',
     file: {
-      enabled: false,
+      enabled: true,
       path: 'logs',
       rotation: 'daily',
       ttlDays: 7
@@ -206,15 +206,6 @@ export default {
         url: 'https://cipher.kikkia.dev/api',
         token: null
       }
-    },
-    instagram: {
-      enabled: true
-    },
-    kwai: {
-      enabled: true
-    },
-    twitch: {
-      enabled: true
     },
     spotify: {
       enabled: true,
