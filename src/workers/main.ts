@@ -81,8 +81,8 @@ let statsUpdateTimer: NodeJS.Timeout | null = null
 const getErrorMessage = (error: unknown): string =>
   error instanceof Error ? error.message : String(error)
 
-const hndl = monitorEventLoopDelay({ resolution: 10 })
-hndl.enable()
+const hndl = typeof monitorEventLoopDelay === "function" ? typeof monitorEventLoopDelay === 'function' ? monitorEventLoopDelay({ resolution: 10 }) : null : null
+hndl?.enable()
 
 try {
   os.setPriority(os.constants.priority.PRIORITY_HIGH)
@@ -736,10 +736,10 @@ const handleProfilerCommand = async (
       heapSpaces: getHeapSpaces(),
       uptimeSec: Math.floor(process.uptime()),
       eventLoop: {
-        minMs: Number((hndl.min / 1e6).toFixed(3)),
-        maxMs: Number((hndl.max / 1e6).toFixed(3)),
-        meanMs: Number((hndl.mean / 1e6).toFixed(3)),
-        stddevMs: Number((hndl.stddev / 1e6).toFixed(3))
+        minMs: Number((hndl?.min ?? 0 / 1e6).toFixed(3)),
+        maxMs: Number((hndl?.max ?? 0 / 1e6).toFixed(3)),
+        meanMs: Number((hndl?.mean ?? 0 / 1e6).toFixed(3)),
+        stddevMs: Number((hndl?.stddev ?? 0 / 1e6).toFixed(3))
       },
       activeResources: getActiveResourcesBreakdown(),
       activeHandles: getActiveHandlesBreakdown(),
@@ -1690,7 +1690,7 @@ function startTimers(hibernating = false): void {
           0
         ),
         cpu: { nodelinkLoad },
-        eventLoopLag: hndl.mean / 1e6,
+        eventLoopLag: hndl?.mean ?? 0 / 1e6,
         memory: {
           used: mem.heapUsed,
           allocated: mem.heapTotal
