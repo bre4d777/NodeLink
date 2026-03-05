@@ -112,7 +112,7 @@ export default {
   },
   defaultSearchSource: ['youtube', 'soundcloud'],
   unifiedSearchSources: ['youtube', 'soundcloud'],
-  mirroringSources: ["admsearch","jssearch","gnsearch","dzsearch","scsearch","ytmsearch","ytsearch"],
+  mirroringSources: ["jssearch","admsearch","dzsearch","scsearch","ytmsearch","ytsearch"],
   sources: {
     audiomack: {
       enabled: true
@@ -171,7 +171,6 @@ export default {
       fallbackSources: [
         'soundcloud',
         'jiosaavn',
-        'gaana',
         'audiomack',
         'deezer',
         'bandcamp',
