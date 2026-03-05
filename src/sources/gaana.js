@@ -361,7 +361,7 @@ export default class GaanaSource {
       const mirrored = await mirror(
         this.nodelink,
         decodedTrack,
-        this.config.mirroringSources,
+        this.nodelink.options.mirroringSources,
       );
       if (!mirrored) {
         return {

@@ -1570,7 +1570,7 @@ export default class SpotifySource {
 
 
     try {
-      const mirrored = await mirror(this.nodelink, decodedTrack, this.config.mirroringSources)
+      const mirrored = await mirror(this.nodelink, decodedTrack, this.nodelink.options.mirroringSources,)
       if (!mirrored){
          return { exception: { message: 'No suitable match.', severity: 'fault' } }
       }
