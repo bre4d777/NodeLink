@@ -212,9 +212,9 @@ export default {
       clientSecret: '',
       externalAuthUrl: 'http://get.1lucas1apk.fun/spotify/gettoken', // URL to external token provider (e.g. http://localhost:8080/api/token - use https://github.com/topi314/spotify-tokener or https://github.com/1Lucas1apk/gettoken)
       market: 'US',
-      playlistLoadLimit: 1, // 0 means no limit (loads all tracks), 1 = 100 tracks, 2 = 100 and so on!
+      playlistLoadLimit: 0, // 0 means no limit (loads all tracks), 1 = 100 tracks, 2 = 100 and so on!
       playlistPageLoadConcurrency: 10, // How many pages to load simultaneously
-      albumLoadLimit: 1, // 0 means no limit (loads all tracks), 1 = 50 tracks, 2 = 100 tracks, etc.
+      albumLoadLimit: 9, // 0 means no limit (loads all tracks), 1 = 50 tracks, 2 = 100 tracks, etc.
       albumPageLoadConcurrency: 5, // How many pages to load simultaneously
       allowExplicit: true, // If true plays the explicit version of the song, If false plays the Non-Explicit version of the song. Normal songs are not affected.
       sp_dc: '' // fot getting mobile token (optional) get from spotify in browser devtools -> Application -> Cookies -> sp_dc (required for canvas)
@@ -236,42 +236,6 @@ export default {
       playlistLoadLimit: 2, // 0 = no limit, 1 = 50 tracks, 2 = 100 tracks, etc.
       playlistPageLoadConcurrency: 5 // How many pages to load simultaneously
     },
-  },
-  lyrics: {
-    fallbackSource: 'genius',
-    youtube: {
-      enabled: true
-    },
-    genius: {
-      enabled: true
-    },
-    musixmatch: {
-      enabled: true
-      // signatureSecret: ''
-    },
-    deezer: {
-      enabled: true
-    },
-    lrclib: {
-      enabled: true
-    },
-    letrasmus: {
-      enabled: true
-    },
-    bilibili: {
-      enabled: true
-    },
-    yandexmusic: {
-      enabled: true
-    }
-  },
-  meanings: {
-    letrasmus: {
-      enabled: true
-    },
-    wikipedia: {
-      enabled: true
-    }
   },
   audio: {
     quality: 'high', // high, medium, low, lowest
