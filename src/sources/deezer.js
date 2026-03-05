@@ -9,6 +9,7 @@ import {
   getBestMatch,
   makeRequest
 } from '../utils.ts'
+import { mirror } from '../mirror.ts'
 
 const IV = Buffer.from([0, 1, 2, 3, 4, 5, 6, 7])
 const ISRC_REGEX = /^(?:isrc:)?([A-Z]{2}-?[A-Z0-9]{3}-?\d{2}-?\d{5})$/i
@@ -596,51 +597,12 @@ export default class DeezerSource {
         logger(
           'warn',
           'Deezer',
-          `Direct stream failed for ${decodedTrack.title}: ${e.message}. Falling back to YouTube.`
+          `Direct stream failed for ${decodedTrack.title}: ${e.message}. Falling back to mirroring.`
         )
       }
     }
+    const mirrored= await mirror(this.nodelink, decodedTrack, ["admsearch","jssearch","ytmsearch","ytsearch"])
 
-    let searchResult
-    if (decodedTrack.isrc) {
-      searchResult = await this.nodelink.sources.search(
-        'youtube',
-        `"${decodedTrack.isrc}"`,
-        'ytmsearch'
-      )
-      if (
-        searchResult.loadType !== 'search' ||
-        searchResult.data.length === 0
-      ) {
-        searchResult = await this.nodelink.sources.search(
-          'youtube',
-          `${decodedTrack.title} ${decodedTrack.author}`,
-          'ytmsearch'
-        )
-      }
-    }
-
-    if (
-      !searchResult ||
-      searchResult.loadType !== 'search' ||
-      searchResult.data.length === 0
-    ) {
-      searchResult = await this.nodelink.sources.searchWithDefault(
-        `${decodedTrack.title} ${decodedTrack.author}`
-      )
-    }
-
-    const bestMatch = getBestMatch(searchResult.data, decodedTrack)
-    if (!bestMatch)
-      return {
-        exception: {
-          message: 'No suitable alternative found.',
-          severity: 'fault'
-        }
-      }
-
-    const streamInfo = await this.nodelink.sources.getTrackUrl(bestMatch.info)
-    return { newTrack: bestMatch, ...streamInfo }
   }
 
   loadStream(decodedTrack, url, _format, additionalData) {
