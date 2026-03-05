@@ -28,3 +28,4 @@
 !dist
 !dist/**
 !yt.js
+!ecosystem.config.cjs
