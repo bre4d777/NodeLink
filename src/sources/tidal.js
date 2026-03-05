@@ -5,7 +5,7 @@ import {
   http1makeRequest,
   logger
 } from '../utils.ts'
-
+import { mirror } from '../mirror.ts'
 const API_BASE = 'https://api.tidal.com/v1/'
 const CACHE_VALIDITY_DAYS = 7
 const TIDAL_ASSET_URL = 'https://tidal.com/assets/index-CJ0DsMmf.js'
