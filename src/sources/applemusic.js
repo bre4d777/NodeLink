@@ -5,7 +5,7 @@ import {
   http1makeRequest,
   logger
 } from '../utils.ts'
-
+import { mirror, mirror } from '../mirror.ts'
 const API_BASE = 'https://amp-api.music.apple.com/v1'
 const MAX_PAGE_ITEMS = 300
 const BATCH_SIZE_DEFAULT = 5
@@ -663,77 +663,21 @@ export default class AppleMusicSource {
     return results
   }
 
+
   async getTrackUrl(decodedTrack, itag, forceRefresh = false) {
-    let isExplicit = false
-    if (decodedTrack.uri) {
-      try {
-        const url = new URL(decodedTrack.uri)
-        isExplicit = url.searchParams.get('explicit') === 'true'
-      } catch (_error) {
-        // Ignore malformed URI
-      }
+    const mirror = await mirror(this.nodelink, decodedTrack, this.config.mirroringSources)
+
+    if (!mirror) {
+      return { exception: { message: 'No suitable match.', severity: 'fault' } }
     }
 
-    const query = this._buildSearchQuery(decodedTrack, isExplicit)
-
     try {
-      let searchResult
-
-      if (decodedTrack.isrc) {
-        searchResult = await this.nodelink.sources.search(
-          'youtube',
-          `"${decodedTrack.isrc}"`,
-          'ytmsearch'
-        )
-        if (
-          searchResult.loadType !== 'search' ||
-          searchResult.data.length === 0
-        ) {
-          searchResult = null
-        }
-      }
-
-      if (!searchResult) {
-        searchResult = await this.nodelink.sources.search(
-          'youtube',
-          query,
-          'ytmsearch'
-        )
-      }
-
-      if (
-        searchResult.loadType !== 'search' ||
-        searchResult.data.length === 0
-      ) {
-        searchResult = await this.nodelink.sources.searchWithDefault(query)
-      }
-
-      if (
-        searchResult.loadType !== 'search' ||
-        searchResult.data.length === 0
-      ) {
-        return {
-          exception: { message: 'No alternative found.', severity: 'fault' }
-        }
-      }
-
-      const bestMatch = getBestMatch(searchResult.data, decodedTrack, {
-        allowExplicit: this.allowExplicit
-      })
-
-      if (!bestMatch) {
-        return {
-          exception: { message: 'No suitable match.', severity: 'fault' }
-        }
-      }
-
-      const stream = await this.nodelink.sources.getTrackUrl(bestMatch.info, itag, forceRefresh)
-      return { newTrack: bestMatch, ...stream }
+      const stream = await this.nodelink.sources.getTrackUrl(mirror.match.info ?? mirror.match, itag, forceRefresh)
+      return { newTrack: mirror.match, ...stream }
     } catch (error) {
       return { exception: { message: error.message, severity: 'fault' } }
     }
   }
-
   _buildSearchQuery(track, isExplicit) {
     let searchQuery = `${track.title} ${track.author}`
     if (isExplicit) {

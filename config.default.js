@@ -112,58 +112,8 @@ export default {
   },
   defaultSearchSource: ['youtube', 'soundcloud'],
   unifiedSearchSources: ['youtube', 'soundcloud'],
+  mirroringSources: ["admsearch","jssearch","gnsearch","dzsearch","scsearch","ytmsearch","ytsearch"],
   sources: {
-    vkmusic: {
-      enabled: true,
-      userToken: '', // (optional) get from vk in browser devtools -> reqs POST /?act=web_token HTTP/2 - headers -> response -> access_token
-      userCookie: '', // (required without userToken) get from vk in browser devtools -> reqs POST /?act=web_token HTTP/2 - headers -> request -> cookie (copy full cookie header)
-      proxy: {
-        url: '',
-        username: '',
-        password: ''
-      }
-    },
-    amazonmusic: {
-      enabled: true
-    },
-    bluesky: {
-      enabled: true
-    },
-    anghami: {
-      enabled: false,
-      cookies: '' // Optional: Useful for accessing restricted or private content
-    },
-    rss: {
-      enabled: true
-    },
-    songlink: {
-      enabled: true,
-      apiKey: '',
-      userCountry: 'US',
-      songIfSingle: true,
-      useApi: true,
-      useScrapeFallback: true,
-      preferredPlatforms: [
-        'spotify',
-        'appleMusic',
-        'youtubeMusic',
-        'youtube',
-        'deezer',
-        'tidal',
-        'amazonMusic',
-        'soundcloud',
-        'bandcamp',
-        'audius',
-        'audiomack',
-        'pandora',
-        'itunes',
-        'amazonStore'
-      ],
-      fallbackToAny: true
-    },
-    mixcloud: {
-      enabled: true
-    },
     audiomack: {
       enabled: true
     },
@@ -187,77 +137,7 @@ export default {
       enabled: true,
       userAgent: '' // Optional: defaults to NodeLink/<version> (https://github.com/PerformanC/NodeLink)
     },
-    eternalbox: {
-      enabled: true,
-      baseUrl: 'https://eternalboxmirror.xyz',
-      searchResults: 30,
-      enrichSpotify: true,
-      includeAnalysis: true,
-      includeAnalysisSummary: true,
-      eternalStream: true,
-      cacheMaxBytes: 20 * 1024 * 1024,
-      maxBranches: 4,
-      maxBranchThreshold: 75,
-      branchThresholdStart: 10,
-      branchThresholdStep: 5,
-      branchTargetDivisor: 6,
-      addLastEdge: true,
-      justBackwards: false,
-      justLongBranches: false,
-      removeSequentialBranches: true,
-      useFilteredSegments: true,
-      minRandomBranchChance: 0.18,
-      maxRandomBranchChance: 0.5,
-      randomBranchChanceDelta: 0.09,
-      timbreWeight: 1,
-      pitchWeight: 10,
-      loudStartWeight: 1,
-      loudMaxWeight: 1,
-      durationWeight: 100,
-      confidenceWeight: 1,
-      infiniteStream: true,
-      maxReconnects: 0,
-      reconnectDelayMs: 1000
-    },
-    vimeo: {
-      // Note: not 100% of the songs are currently working (but most should.), because i need to code a different extractor for every year (2010, 2011, etc. not all are done)
-      enabled: true
-    },
-    iheartradio: {
-      enabled: true
-    },
-    telegram: {
-      enabled: true
-    },
-    shazam: {
-      enabled: true,
-      allowExplicit: true
-    },
-    bilibili: {
-      enabled: true,
-      sessdata: '' // Optional, improves access to some videos (premium and 4k+)
-    },
-    genius: {
-      enabled: true
-    },
-    pinterest: {
-      enabled: true
-    },
-    flowery: {
-      enabled: true,
-      voice: 'Salli',
-      translate: false,
-      silence: 0,
-      speed: 1.0,
-      enforceConfig: false
-    },
-    lazypytts: {
-      enabled: true,
-      service: 'Cerence',
-      voice: 'Luciana',
-      maxTextLength: 3000,
-      enforceConfig: false
-    },
+    
     jiosaavn: {
       enabled: true,
       playlistLoadLimit: 50,
@@ -281,24 +161,6 @@ export default {
         password: '' // Optional password
       }
     },
-    'google-tts': {
-      enabled: true,
-      language: 'en-US'
-    },
-    // Piper TTS Configuration
-    // This source uses an external Piper TTS HTTP server.
-    // You can find the Piper HTTP server repository here:
-    // https://github.com/OHF-Voice/piper1-gpl/tree/main?tab=readme-ov-file
-    pipertts: {
-      enabled: false, // Disabled by default. Enable it to use Piper TTS.
-      url: 'http://localhost:5000' // URL of your Piper TTS server
-      // Optional settings (defaults from Piper):
-      // voice: 'en_US-lessac-medium',
-      // speaker: 0,
-      // length_scale: 1.0,
-      // noise_scale: 0.667,
-      // noise_w_scale: 0.8
-    },
     youtube: {
       enabled: true,
       allowItag: [], // additional itags for audio streams, e.g., [140, 141]
@@ -308,19 +170,11 @@ export default {
       gl: 'US',
       fallbackSources: [
         'soundcloud',
-        'deezer',
         'jiosaavn',
-        'qobuz',
         'gaana',
-        'vkmusic',
-        'yandexmusic',
         'audiomack',
+        'deezer',
         'bandcamp',
-        'audius',
-        'mixcloud',
-        'bilibili',
-        'bluesky',
-        'nicovideo'
       ], // Internal fallback chain when YouTube stream URL fails
       clients: {
         search: ['Android'], // Clients used for searching tracks
@@ -385,14 +239,6 @@ export default {
       albumPageLoadConcurrency: 5,
       allowExplicit: true
     },
-    audius: {
-      enabled: true,
-      appName: '',
-      apiKey: '', // go to https://audius.co/settings and create an app and paste the app name and api stuff into here.
-      apiSecret: '',
-      playlistLoadLimit: 100,
-      albumLoadLimit: 100
-    },
     tidal: {
       enabled: true,
       token: 'token_here', //manually | or "token_here" to get a token automatically, get from tidal web player devtools; using login google account
@@ -400,52 +246,6 @@ export default {
       playlistLoadLimit: 2, // 0 = no limit, 1 = 50 tracks, 2 = 100 tracks, etc.
       playlistPageLoadConcurrency: 5 // How many pages to load simultaneously
     },
-    pandora: {
-      enabled: true,
-      // Optional, setting this manually can help unblocking countries (since pandora is US only.). May need to be updated periodically.
-      // fetching manually: use a vpn connected to US, go on pandora.com, open devtools, Network tab, first request to appear and copy the 2nd csrfToken= value.
-      // csrfToken: '',
-      remoteTokenUrl: 'https://get.1lucas1apk.fun/pandora/gettoken' // URL to a remote provider that returns { success: true, authToken: "...", csrfToken: "...", expires_in_seconds: ... } //https://github.com/1Lucas1apk/gettoken
-    },
-    nicovideo: {
-      enabled: true
-    },
-    reddit: {
-      enabled: true
-    },
-    tumblr: {
-      enabled: true
-    },
-    twitter: {
-      enabled: true
-    },
-    qobuz: {
-      enabled: true,
-      userToken: '', // (optional) get from play.qobuz.com in browser devtools -> Application -> Local Storage -> localuser -> token
-      formatId: '5', // 5 = MP3 320kbps, 6 = FLAC (requires Studio subscription), 27 = Hi-Res FLAC
-      allowExplicit: true
-    },
-    lastfm: {
-      enabled: true,
-      apiKey: '', // You can get the api key from: https://www.last.fm/api/account/create
-    },
-    letrasmus: {
-      enabled: true
-    },
-    yandexmusic: {
-      enabled: true,
-      accessToken: '',
-      allowUnavailable: false,
-      allowExplicit: true,
-      artistLoadLimit: 1, // 0 = no limit, 1 = 10 tracks, 2 = 20 tracks, etc.
-      albumLoadLimit: 1, // 0 = no limit, 1 = 50 tracks, 2 = 100 tracks, etc.
-      playlistLoadLimit: 1, // 0 = no limit, 1 = 100 tracks, 2 = 200 tracks, etc.
-      proxy: {
-        url: '',
-        username: '',
-        password: ''
-      }
-    }
   },
   lyrics: {
     fallbackSource: 'genius',
