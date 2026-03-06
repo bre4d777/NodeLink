@@ -112,7 +112,7 @@ export default {
   },
   defaultSearchSource: ['youtube', 'soundcloud'],
   unifiedSearchSources: ['youtube', 'soundcloud'],
-  mirroringSources: ["jssearch","admsearch","scsearch","dzsearch","ytmsearch","ytsearch"],
+  mirroringSources: ["jssearch","admsearch","scsearch","ytsearch"],
   sources: {
     audiomack: {
       enabled: true
