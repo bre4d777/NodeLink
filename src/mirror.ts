@@ -1,7 +1,6 @@
 const log = {
-  info:  (msg: string) => console.log(`\x1b[32m[INFO]\x1b[0m  [Mirroring] ${msg}`),
-  debug: (msg: string) => console.log(`\x1b[34m[DEBUG]\x1b[0m [Mirroring] ${msg}`),
-  warn:  (msg: string) => console.log(`\x1b[33m[WARN]\x1b[0m  [Mirroring] ${msg}`),
+  info: (msg: string) => console.log(`\x1b[32m[INFO]\x1b[0m  [Mirroring] ${msg}`),
+  warn: (msg: string) => console.log(`\x1b[33m[WARN]\x1b[0m  [Mirroring] ${msg}`),
 }
 
 const DURATION_TOLERANCE_MS = 3000
@@ -9,7 +8,6 @@ const MIN_SIMILARITY = 0.50
 const HIGH_CONFIDENCE = 0.75
 const IMMEDIATE_USE = 0.88
 const THROTTLED_SOURCES = new Set(['ytmsearch', 'ytsearch'])
-
 const WEIGHTS = { title: 0.50, artist: 0.30, duration: 0.20 }
 
 interface Track {
@@ -29,6 +27,8 @@ interface ScoredMatch {
   score: number
   streamInfo?: StreamInfo
 }
+
+interface CancelToken { cancelled: boolean }
 
 function normalize(str: string): string {
   if (!str) return ''
@@ -73,14 +73,12 @@ function durationSimilarity(d1: number, d2: number): number {
 function scoreMatch(original: Track, candidate: Track): number {
   const origTitle = normalize(original.title || '')
   const candTitle = normalize(candidate.info?.title || candidate.title || '')
-
   let titleScore: number
   if (origTitle === candTitle) titleScore = 1.0
   else if (candTitle.startsWith(origTitle)) titleScore = 0.95
   else if (candTitle.includes(origTitle) || origTitle.includes(candTitle))
     titleScore = 0.82 + (Math.min(origTitle.length, candTitle.length) / Math.max(origTitle.length, candTitle.length)) * 0.10
   else titleScore = stringSimilarity(origTitle, candTitle)
-
   return (titleScore * WEIGHTS.title)
     + (stringSimilarity(original.author || '', candidate.info?.author || candidate.author || '') * WEIGHTS.artist)
     + (durationSimilarity(original.length || 0, candidate.info?.length || candidate.length || 0) * WEIGHTS.duration)
@@ -88,48 +86,52 @@ function scoreMatch(original: Track, candidate: Track): number {
 
 function rankCandidates(original: Track, candidates: Track[]): ScoredMatch[] {
   if (!candidates.length) return []
-  const scored: ScoredMatch[] = candidates.slice(0, 10).map((match, i) => {
-    const score = scoreMatch(original, match)
-    log.debug(`Candidate ${i + 1}: "${match.info?.title || match.title}" | Score: ${score.toFixed(3)}`)
-    return { match, score }
-  })
-  return scored.sort((a, b) => b.score - a.score)
+  return candidates.slice(0, 10)
+    .map(match => ({ match, score: scoreMatch(original, match) }))
+    .sort((a, b) => b.score - a.score)
 }
 
-async function validateStream(nodelink: any, match: Track): Promise<{ valid: boolean; streamInfo?: StreamInfo; error?: string }> {
-  const title = match.info?.title ?? match.title ?? 'unknown'
+function fmt(ms: number): string {
+  const s = Math.round((ms || 0) / 1000)
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
+}
+
+function logResolved(original: Track, prefix: string, result: ScoredMatch): void {
+  const m = result.match.info ?? result.match as any
+  log.info(
+    `"${original.title ?? '?'}" | ${original.author ?? '?'} | ${fmt(original.length ?? 0)}` +
+    ` => ${prefix} | "${m.title ?? '?'}" | ${m.author ?? '?'} | ${fmt(m.length ?? 0)} | score: ${result.score.toFixed(3)}`
+  )
+}
+
+async function validateStream(nodelink: any, match: Track): Promise<{ valid: boolean; streamInfo?: StreamInfo }> {
   try {
     const streamInfo: StreamInfo | null = await nodelink.sources.getTrackUrl(match.info ?? match)
-    if (!streamInfo || streamInfo.exception || !streamInfo.url) {
-      log.debug(`Stream invalid for "${title}": ${streamInfo?.exception?.message ?? 'no url'}`)
-      return { valid: false, error: streamInfo?.exception?.message ?? 'Invalid or missing stream URL' }
-    }
-    log.debug(`Stream validated for "${title}": ${streamInfo.url}`)
+    if (!streamInfo || streamInfo.exception || !streamInfo.url) return { valid: false }
     return { valid: true, streamInfo }
-  } catch (e: any) {
-    log.debug(`Stream exception for "${title}": ${e.message}`)
-    return { valid: false, error: e.message }
+  } catch {
+    return { valid: false }
   }
 }
 
 async function findBestValidMatch(nodelink: any, scoredMatches: ScoredMatch[], threshold: number): Promise<ScoredMatch | null> {
-  const candidates = scoredMatches.filter(({ score }) => score >= threshold)
-  if (!candidates.length) {
-    log.debug(`No candidates above threshold ${threshold.toFixed(2)}`)
-    return null
-  }
-  for (const { match, score } of candidates) {
+  for (const { match, score } of scoredMatches) {
+    if (score < threshold) continue
     const { valid, streamInfo } = await validateStream(nodelink, match)
-    if (valid) {
-      log.info(`Match found: "${match.info?.title ?? match.title}" (score: ${score.toFixed(3)})`)
-      return { match, score, streamInfo }
-    }
+    if (valid) return { match, score, streamInfo }
   }
   return null
 }
 
-async function searchSource(nodelink: any, track: Track, prefix: string, priority: number, query: string): Promise<(ScoredMatch & { prefix: string }) | null> {
-  log.debug(`[${prefix}] priority ${priority} | query: "${query}"`)
+async function searchSource(
+  nodelink: any,
+  track: Track,
+  prefix: string,
+  query: string,
+  cancel: CancelToken,
+  trustAny = false
+): Promise<(ScoredMatch & { prefix: string }) | null> {
+  if (cancel.cancelled) return null
   let searchResult: any
   try {
     searchResult = await nodelink.sources.search(prefix, query)
@@ -137,44 +139,38 @@ async function searchSource(nodelink: any, track: Track, prefix: string, priorit
     log.warn(`[${prefix}] search failed: ${e.message}`)
     return null
   }
-  if (searchResult.loadType !== 'search' || !searchResult.data?.length) return null
+  if (cancel.cancelled || searchResult.loadType !== 'search' || !searchResult.data?.length) return null
 
   const ranked = rankCandidates(track, searchResult.data)
   if (!ranked.length) return null
-  const top = ranked[0]!.score
 
-  const result = await findBestValidMatch(
-    nodelink,
-    ranked.slice(0, top >= IMMEDIATE_USE ? 1 : top >= HIGH_CONFIDENCE ? 2 : 3),
-    top >= IMMEDIATE_USE ? IMMEDIATE_USE : top >= HIGH_CONFIDENCE ? HIGH_CONFIDENCE : MIN_SIMILARITY
-  )
-  if (!result) return null
-  log.info(`[${prefix}] Resolved: "${result.match.info?.title ?? result.match.title}" (score: ${result.score.toFixed(3)})`)
+  let result: ScoredMatch | null
+  if (trustAny) {
+    result = await findBestValidMatch(nodelink, ranked, 0)
+  } else {
+    const top = ranked[0]!.score
+    const limit     = top >= IMMEDIATE_USE ? 1 : top >= HIGH_CONFIDENCE ? 2 : 3
+    const threshold = top >= IMMEDIATE_USE ? IMMEDIATE_USE : top >= HIGH_CONFIDENCE ? HIGH_CONFIDENCE : MIN_SIMILARITY
+    result = await findBestValidMatch(nodelink, ranked.slice(0, limit), threshold)
+  }
+
+  if (!result || cancel.cancelled) return null
   return { ...result, prefix }
 }
 
-async function raceToImmediate(promises: Promise<(ScoredMatch & { prefix: string }) | null>[]): Promise<{
-  winner: (ScoredMatch & { prefix: string }) | null
-  rest: Promise<(ScoredMatch & { prefix: string }) | null>[]
-}> {
+async function raceToImmediate(
+  promises: Promise<(ScoredMatch & { prefix: string }) | null>[]
+): Promise<{ winner: (ScoredMatch & { prefix: string }) | null; rest: Promise<(ScoredMatch & { prefix: string }) | null>[] }> {
   return new Promise(resolve => {
-    const remaining = [...promises]
     let settled = 0
-    const results: ((ScoredMatch & { prefix: string }) | null)[] = []
-
     promises.forEach((p, i) => {
       p.then(result => {
         settled++
-        results[i] = result
-        if (result?.score !== undefined && result.score >= IMMEDIATE_USE) {
-          resolve({ winner: result, rest: remaining.filter((_, j) => j !== i) })
-        } else if (settled === promises.length) {
-          resolve({ winner: null, rest: [] })
-        }
-      }).catch(() => {
-        settled++
-        results[i] = null
+        if (result && result.score >= IMMEDIATE_USE)
+          return resolve({ winner: result, rest: promises.filter((_, j) => j !== i) })
         if (settled === promises.length) resolve({ winner: null, rest: [] })
+      }).catch(() => {
+        if (++settled === promises.length) resolve({ winner: null, rest: [] })
       })
     })
   })
@@ -188,33 +184,44 @@ async function mirror(nodelink: any, track: Track, mirroringSources?: string[]):
     ? `${track.title} ${track.author}`
     : track.title ?? ''
 
-  const freeSources     = sources.filter(s => !THROTTLED_SOURCES.has(s))
+  const freeSources      = sources.filter(s => !THROTTLED_SOURCES.has(s))
   const throttledSources = sources.filter(s => THROTTLED_SOURCES.has(s))
 
+  const cancel: CancelToken = { cancelled: false }
   let globalBest: (ScoredMatch & { prefix: string }) | null = null
 
   if (freeSources.length) {
-    const freePromises = freeSources.map((prefix, i) => searchSource(nodelink, track, prefix, i, query))
+    const freePromises = freeSources.map(prefix => searchSource(nodelink, track, prefix, query, cancel))
     const { winner, rest } = await raceToImmediate(freePromises)
 
-    if (winner) return winner
+    if (winner) {
+      cancel.cancelled = true
+      logResolved(track, winner.prefix, winner)
+      return winner
+    }
 
     const remaining = await Promise.all(rest.length ? rest : freePromises)
     for (const r of remaining) {
       if (r && (!globalBest || r.score > globalBest.score)) globalBest = r
     }
-    if (globalBest?.score !== undefined && globalBest.score >= IMMEDIATE_USE) return globalBest
+    if (globalBest && globalBest.score >= IMMEDIATE_USE) {
+      cancel.cancelled = true
+      logResolved(track, globalBest.prefix, globalBest)
+      return globalBest
+    }
   }
 
-  for (let i = 0; i < throttledSources.length; i++) {
-    const result = await searchSource(nodelink, track, throttledSources[i]!, freeSources.length + i, query)
+  for (const prefix of throttledSources) {
+    if (cancel.cancelled) break
+    const result = await searchSource(nodelink, track, prefix, query, cancel, true)
     if (!result) continue
-    if (result.score >= IMMEDIATE_USE) return result
-    if (!globalBest || result.score > globalBest.score + 0.08) globalBest = result
+    cancel.cancelled = true
+    logResolved(track, result.prefix, result)
+    return result
   }
 
   if (globalBest) {
-    log.info(`[${globalBest.prefix}] Resolved (global best): "${globalBest.match.info?.title || 'unknown'}" (score: ${globalBest.score.toFixed(3)})`)
+    logResolved(track, globalBest.prefix, globalBest)
     return globalBest
   }
 
